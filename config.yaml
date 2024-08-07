@@ -1,0 +1,6 @@
+api_url: "https://api.example.com"
+poll_interval: 60
+log_level: "info"
+log_path: "/var/log/crossplatformagent.log"
+agent_id: "your_agent_id"
+agent_password: "your_agent_password"
