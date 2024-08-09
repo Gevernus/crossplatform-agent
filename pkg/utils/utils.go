@@ -22,3 +22,16 @@ func OpenDirectory(path string) error {
 
 	return cmd.Start()
 }
+
+func OpenFile(filePath string) error {
+	switch runtime.GOOS {
+	case "darwin":
+		return exec.Command("open", filePath).Start()
+	case "linux":
+		return exec.Command("xdg-open", filePath).Start()
+	case "windows":
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", filePath).Start()
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
+}

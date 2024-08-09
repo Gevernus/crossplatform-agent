@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Client struct {
@@ -23,6 +25,19 @@ type StatusUpdate struct {
 type Command struct {
 	Action string            `json:"action"`
 	Params map[string]string `json:"params,omitempty"`
+}
+
+func (c Command) String() string {
+	var params []string
+	for key, value := range c.Params {
+		params = append(params, fmt.Sprintf("%s: %s", key, value))
+	}
+
+	paramsStr := strings.Join(params, ", ")
+	if paramsStr != "" {
+		return fmt.Sprintf("Action: %s, Params: {%s}", c.Action, paramsStr)
+	}
+	return fmt.Sprintf("Action: %s", c.Action)
 }
 
 func NewClient(baseURL, agentID, password string) *Client {

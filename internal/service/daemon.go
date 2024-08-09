@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"text/template"
 
@@ -11,21 +12,29 @@ import (
 )
 
 func (s *Service) Install() error {
-	log.Info("Starting service installation")
-	var err error
+	log.Infof("Starting service installation on OS: %s", runtime.GOOS)
+
+	// Get absolute path for config
+	absConfigPath, err := filepath.Abs(s.cfg.ConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path for config: %v", err)
+	}
+	s.cfg.ConfigPathAbs = absConfigPath
+
+	var installErr error
 	switch runtime.GOOS {
 	case "windows":
-		err = s.installWindows()
+		installErr = s.installWindows()
 	case "darwin":
-		err = s.installMacOS()
+		installErr = s.installMacOS()
 	case "linux":
-		err = s.installLinux()
+		installErr = s.installLinux()
 	default:
-		err = fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+		installErr = fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
 	}
-	if err != nil {
-		log.Error("Service installation failed:", err)
-		return err
+	if installErr != nil {
+		log.Error("Service installation failed:", installErr)
+		return installErr
 	}
 	log.Info("Service installation completed successfully")
 	return nil
@@ -57,7 +66,7 @@ func (s *Service) Start() error {
 	case "windows":
 		return exec.Command("net", "start", "CrossPlatformAgentService").Run()
 	case "darwin":
-		return exec.Command("launchctl", "load", "/Library/LaunchDaemons/com.yourcompany.crossplatformagent.plist").Run()
+		return exec.Command("launchctl", "load", "/Library/LaunchDaemons/com.gevernus.crossplatformagent.plist").Run()
 	case "linux":
 		return exec.Command("systemctl", "start", "crossplatformagent.service").Run()
 	default:
@@ -70,7 +79,7 @@ func (s *Service) Stop() error {
 	case "windows":
 		return exec.Command("net", "stop", "CrossPlatformAgentService").Run()
 	case "darwin":
-		return exec.Command("launchctl", "unload", "/Library/LaunchDaemons/com.yourcompany.crossplatformagent.plist").Run()
+		return exec.Command("launchctl", "unload", "/Library/LaunchDaemons/com.gevernus.crossplatformagent.plist").Run()
 	case "linux":
 		return exec.Command("systemctl", "stop", "crossplatformagent.service").Run()
 	default:
@@ -79,11 +88,41 @@ func (s *Service) Stop() error {
 }
 
 func (s *Service) installWindows() error {
+	logDir := filepath.Join(os.Getenv("ProgramData"), "CrossPlatformAgent", "logs")
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory: %v", err)
+	}
+
+	logFile := filepath.Join(logDir, "crossplatformagent.log")
+	errFile := filepath.Join(logDir, "crossplatformagent.err")
+	if err := os.WriteFile(logFile, []byte{}, 0644); err != nil {
+		return fmt.Errorf("failed to create log file: %v", err)
+	}
+	if err := os.WriteFile(errFile, []byte{}, 0644); err != nil {
+		return fmt.Errorf("failed to create error log file: %v", err)
+	}
+
 	cmd := exec.Command("sc", "create", "CrossPlatformAgentService",
-		"binPath=", os.Args[0],
+		"binPath=", fmt.Sprintf("%s -config %s", os.Args[0], s.cfg.ConfigPath),
 		"start=", "auto",
 		"DisplayName=", "Cross Platform Agent Service")
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to create Windows service: %v", err)
+	}
+
+	regCmd := exec.Command("reg", "add", `HKLM\SYSTEM\CurrentControlSet\Services\CrossPlatformAgentService\Parameters`,
+		"/v", "AppStdout", "/t", "REG_EXPAND_SZ", "/d", logFile, "/f")
+	if err := regCmd.Run(); err != nil {
+		return fmt.Errorf("failed to set up stdout logging: %v", err)
+	}
+
+	regCmd = exec.Command("reg", "add", `HKLM\SYSTEM\CurrentControlSet\Services\CrossPlatformAgentService\Parameters`,
+		"/v", "AppStderr", "/t", "REG_EXPAND_SZ", "/d", errFile, "/f")
+	if err := regCmd.Run(); err != nil {
+		return fmt.Errorf("failed to set up stderr logging: %v", err)
+	}
+
+	return nil
 }
 
 func (s *Service) uninstallWindows() error {
@@ -91,7 +130,21 @@ func (s *Service) uninstallWindows() error {
 }
 
 func (s *Service) installMacOS() error {
-	plistPath := "/Library/LaunchDaemons/com.yourcompany.crossplatformagent.plist"
+	logDir := "/var/log/crossplatformagent"
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory: %v", err)
+	}
+
+	logFile := filepath.Join(logDir, "crossplatformagent.log")
+	errFile := filepath.Join(logDir, "crossplatformagent.err")
+	if err := os.WriteFile(logFile, []byte{}, 0644); err != nil {
+		return fmt.Errorf("failed to create log file: %v", err)
+	}
+	if err := os.WriteFile(errFile, []byte{}, 0644); err != nil {
+		return fmt.Errorf("failed to create error log file: %v", err)
+	}
+
+	plistPath := "/Library/LaunchDaemons/com.gevernus.crossplatformagent.plist"
 
 	tmpl, err := template.New("plist").Parse(macOSPlistTemplate)
 	if err != nil {
@@ -112,9 +165,13 @@ func (s *Service) installMacOS() error {
 	err = tmpl.Execute(file, struct {
 		ExecPath   string
 		ConfigPath string
+		LogFile    string
+		ErrFile    string
 	}{
 		ExecPath:   execPath,
-		ConfigPath: s.cfg.ConfigPath,
+		ConfigPath: s.cfg.ConfigPathAbs,
+		LogFile:    logFile,
+		ErrFile:    errFile,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to write plist file: %v", err)
@@ -125,7 +182,7 @@ func (s *Service) installMacOS() error {
 }
 
 func (s *Service) uninstallMacOS() error {
-	plistPath := "/Library/LaunchDaemons/com.yourcompany.crossplatformagent.plist"
+	plistPath := "/Library/LaunchDaemons/com.gevernus.crossplatformagent.plist"
 
 	cmd := exec.Command("launchctl", "unload", plistPath)
 	if err := cmd.Run(); err != nil {
@@ -144,25 +201,37 @@ const macOSPlistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.yourcompany.crossplatformagent</string>
+    <string>com.gevernus.crossplatformagent</string>
     <key>ProgramArguments</key>
     <array>
         <string>{{.ExecPath}}</string>
-        <string>-config</string>
-        <string>{{.ConfigPath}}</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/var/log/crossplatformagent.log</string>
+    <string>{{.LogFile}}</string>
     <key>StandardErrorPath</key>
-    <string>/var/log/crossplatformagent.err</string>
+    <string>{{.ErrFile}}</string>
 </dict>
 </plist>`
 
 func (s *Service) installLinux() error {
+	logDir := "/var/log/crossplatformagent"
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory: %v", err)
+	}
+
+	logFile := filepath.Join(logDir, "crossplatformagent.log")
+	errFile := filepath.Join(logDir, "crossplatformagent.err")
+	if err := os.WriteFile(logFile, []byte{}, 0644); err != nil {
+		return fmt.Errorf("failed to create log file: %v", err)
+	}
+	if err := os.WriteFile(errFile, []byte{}, 0644); err != nil {
+		return fmt.Errorf("failed to create error log file: %v", err)
+	}
+
 	serviceFilePath := "/etc/systemd/system/crossplatformagent.service"
 
 	tmpl, err := template.New("service").Parse(linuxServiceTemplate)
@@ -184,9 +253,13 @@ func (s *Service) installLinux() error {
 	err = tmpl.Execute(file, struct {
 		ExecPath   string
 		ConfigPath string
+		LogFile    string
+		ErrFile    string
 	}{
 		ExecPath:   execPath,
 		ConfigPath: s.cfg.ConfigPath,
+		LogFile:    logFile,
+		ErrFile:    errFile,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to write service file: %v", err)
@@ -225,6 +298,8 @@ After=network.target
 ExecStart={{.ExecPath}} -config {{.ConfigPath}}
 Restart=always
 User=root
+StandardOutput=append:{{.LogFile}}
+StandardError=append:{{.ErrFile}}
 
 [Install]
 WantedBy=multi-user.target`

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 
@@ -19,12 +20,18 @@ func main() {
 	})
 	log.SetLevel(log.DebugLevel)
 
-	configPath := flag.String("config", "config.yaml", "path to config file")
+	execPath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	// Assuming the config file is located in the same directory as the executable
+	configPath := filepath.Join(filepath.Dir(execPath), "config.yaml")
 	mode := flag.String("mode", "gui", "run mode: service or gui")
 	action := flag.String("action", "", "action to perform: install, uninstall, start, stop")
 	flag.Parse()
 
-	cfg, err := config.Load(*configPath)
+	cfg, err := config.Load(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -51,8 +58,8 @@ func main() {
 		switch *mode {
 		case "service":
 			err = svc.RunAsService()
-		// case "gui":
-		// 	err = svc.RunAsGUI()
+		case "gui":
+			err = svc.RunAsGUI()
 		default:
 			err = fmt.Errorf("unknown mode: %s", *mode)
 		}

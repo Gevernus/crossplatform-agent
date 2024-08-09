@@ -1,0 +1,8 @@
+go build -o crossplatform-agent ./cmd/agent
+cat /Library/LaunchDaemons/com.gevernus.crossplatformagent.plist
+sudo ./crossplatform-agent -action uninstall 
+sudo ./crossplatform-agent -action install 
+sudo ./crossplatform-agent -action start 
+sudo ./crossplatform-agent -mode gui 
+sudo cat /var/log/crossplatformagent.log
+sudo cat /var/log/crossplatformagent.err

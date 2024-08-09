@@ -30,12 +30,14 @@ type MockTrayManager struct {
 	mock.Mock
 }
 
-func (m *MockTrayManager) Run() {
+func (m *MockTrayManager) Run() error {
 	m.Called()
+	return nil
 }
 
-func (m *MockTrayManager) Stop() {
+func (m *MockTrayManager) Stop() error {
 	m.Called()
+	return nil
 }
 
 func TestService_Run(t *testing.T) {

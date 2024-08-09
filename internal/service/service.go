@@ -5,6 +5,8 @@ import (
 	"crossplatform-agent/internal/config"
 	"crossplatform-agent/pkg/commands"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -17,8 +19,8 @@ type APIClient interface {
 }
 
 type TrayManager interface {
-	Run()
-	Stop()
+	Run() error
+	Stop() error
 }
 
 type Service struct {
@@ -52,11 +54,11 @@ func (s *Service) RunAsService() error {
 	return s.runMainLoop()
 }
 
-// func (s *Service) RunAsGUI() error {
-// 	log.Info("Starting in GUI mode")
-// 	go s.runMainLoop()
-// 	return s.runTray()
-// }
+func (s *Service) RunAsGUI() error {
+	log.Info("Starting in GUI mode")
+	go s.runMainLoop()
+	return s.runTray()
+}
 
 func (s *Service) runMainLoop() error {
 	ticker := time.NewTicker(time.Duration(s.cfg.PollInterval) * time.Second)
@@ -76,9 +78,9 @@ func (s *Service) runMainLoop() error {
 	}
 }
 
-func (s *Service) runTray() {
+func (s *Service) runTray() error {
 	defer s.wg.Done()
-	s.tray.Run()
+	return s.tray.Run()
 }
 
 func (s *Service) StopService() {
@@ -100,6 +102,7 @@ func (s *Service) processCommands() error {
 
 	for _, cmd := range commands {
 		log.Debug("Processing command:", cmd.Action)
+		s.logCommand(cmd.String())
 		if err := s.executeCommand(cmd); err != nil {
 			log.Error("Failed to execute command:", cmd.Action, err)
 		}
@@ -127,4 +130,19 @@ func (s *Service) executeCommand(cmd api.Command) error {
 		return fmt.Errorf("unknown command: %s", cmd.Action)
 	}
 	return nil
+}
+
+func (s *Service) logCommand(command string) {
+	logFilePath := filepath.Join(s.cfg.LogDir, "command_history.log")
+	f, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Error("Failed to open log file:", err)
+		return
+	}
+	defer f.Close()
+
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	if _, err := f.WriteString(fmt.Sprintf("%s: %s\n", timestamp, command)); err != nil {
+		log.Error("Failed to write to log file:", err)
+	}
 }
