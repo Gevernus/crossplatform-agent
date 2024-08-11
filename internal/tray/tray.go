@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/getlantern/systray"
 	log "github.com/sirupsen/logrus"
@@ -35,9 +36,12 @@ func (tm *TrayManager) OnExit() {
 }
 
 func (tm *TrayManager) onReady() {
-	systray.SetIcon(assets.MustAsset("assets/tray_icon.ico"))
-	// systray.SetIcon(assets.MustAsset("assets/tray_icon_24x24.png"))
 	systray.SetTooltip("Agent Service")
+	err := setTrayIcon()
+	if err != nil {
+		log.Errorf("Failed to set tray icon: %v", err)
+	}
+
 	active, err := tm.svc.IsActive()
 	if err != nil {
 		log.Fatalf("Failed to check if service is active: %v", err)
@@ -95,6 +99,25 @@ func (tm *TrayManager) onReady() {
 	}()
 }
 
+func setTrayIcon() error {
+	var iconBytes []byte
+	var err error
+
+	switch runtime.GOOS {
+	case "windows":
+		iconBytes, err = assets.Asset("assets/tray_icon.ico")
+	default:
+		iconBytes, err = assets.Asset("assets/tray_icon_24x24.png")
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to load tray icon: %w", err)
+	}
+
+	systray.SetIcon(iconBytes)
+	return nil
+}
+
 func (tm *TrayManager) showCommandHistory() {
 	execPath, err := os.Executable()
 	if err != nil {
@@ -116,12 +139,13 @@ type Command struct {
 }
 
 func (tm *TrayManager) openLogs() {
-	log.Info("Opening logs directory")
 	execPath, err := os.Executable()
 	if err != nil {
 		log.Fatalf("Failed to determine executable path: %v", err)
 	}
-	err = utils.OpenDirectory(execPath)
+	execDir := filepath.Dir(execPath)
+	log.Info("Opening logs directory: ", execDir)
+	err = utils.OpenDirectory(execDir)
 	if err != nil {
 		log.Error("Failed to open logs directory:", err)
 	}

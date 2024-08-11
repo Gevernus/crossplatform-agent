@@ -8,7 +8,6 @@ import (
 
 func OpenDirectory(path string) error {
 	var cmd *exec.Cmd
-
 	switch runtime.GOOS {
 	case "windows":
 		cmd = exec.Command("explorer", path)
@@ -17,10 +16,16 @@ func OpenDirectory(path string) error {
 	case "linux":
 		cmd = exec.Command("xdg-open", path)
 	default:
-		return fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+		// Fallback for other Unix-like systems
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("open '%s' || xdg-open '%s' || x-www-browser '%s'", path, path, path))
 	}
 
-	return cmd.Start()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to open directory: %w, output: %s", err, output)
+	}
+
+	return nil
 }
 
 func OpenFile(filePath string) error {
