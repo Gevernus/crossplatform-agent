@@ -12,20 +12,31 @@ import (
 )
 
 type TrayManager struct {
-	cfg    *config.Config
-	onExit func()
+	cfg          *config.Config
+	startService func() error
+	stopService  func() error
+	onExit       func()
 }
 
-// Stop implements service.TrayManager.
-func (tm *TrayManager) Stop() error {
-	panic("unimplemented")
-}
-
-func NewTrayManager(cfg *config.Config, onExit func()) *TrayManager {
+func NewTrayManager(cfg *config.Config) *TrayManager {
 	return &TrayManager{
-		cfg:    cfg,
-		onExit: onExit,
+		cfg:          cfg,
+		startService: nil,
+		stopService:  nil,
+		onExit:       nil,
 	}
+}
+
+func (tm *TrayManager) SetStartServiceCallback(callback func() error) {
+	tm.startService = callback
+}
+
+func (tm *TrayManager) SetStopServiceCallback(callback func() error) {
+	tm.stopService = callback
+}
+
+func (tm *TrayManager) SetOnExitCallback(callback func()) {
+	tm.onExit = callback
 }
 
 func (tm *TrayManager) Run() error {
@@ -56,15 +67,21 @@ func (tm *TrayManager) onReady() {
 				tm.openLogs()
 			case <-mToggleService.ClickedCh:
 				if mToggleService.Checked() {
-					// Implement logic to stop the service
-					mToggleService.SetTitle("Turn On Service")
-					mStatus.SetTitle("Status: Inactive")
-					mToggleService.Uncheck()
+					if err := tm.stopService(); err != nil {
+						log.Error("Failed to stop service:", err)
+					} else {
+						mToggleService.SetTitle("Turn On Service")
+						mStatus.SetTitle("Status: Inactive")
+						mToggleService.Uncheck()
+					}
 				} else {
-					// Implement logic to start the service
-					mToggleService.SetTitle("Turn Off Service")
-					mStatus.SetTitle("Status: Active")
-					mToggleService.Check()
+					if err := tm.startService(); err != nil {
+						log.Error("Failed to start service:", err)
+					} else {
+						mToggleService.SetTitle("Turn Off Service")
+						mStatus.SetTitle("Status: Active")
+						mToggleService.Check()
+					}
 				}
 			case <-mCommandHistory.ClickedCh:
 				tm.showCommandHistory()

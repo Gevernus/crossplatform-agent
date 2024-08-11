@@ -37,10 +37,14 @@ func main() {
 	}
 
 	apiClient := api.NewClient(cfg.APIURL, cfg.AgentID, cfg.AgentPassword)
-	trayManager := tray.NewTrayManager(cfg, func() {})
+	trayManager := tray.NewTrayManager(cfg)
 
 	// Pass these instances to the Service constructor
 	svc := service.New(cfg, apiClient, trayManager)
+	trayManager.SetStartServiceCallback(svc.Start)
+	trayManager.SetStopServiceCallback(svc.Stop)
+	trayManager.SetOnExitCallback(svc.StopService)
+
 	if err != nil {
 		log.Fatalf("Failed to create service: %v", err)
 	}

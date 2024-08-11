@@ -20,7 +20,6 @@ type APIClient interface {
 
 type TrayManager interface {
 	Run() error
-	Stop() error
 }
 
 type Service struct {
@@ -38,17 +37,6 @@ func New(cfg *config.Config, apiClient APIClient, trayManager TrayManager) *Serv
 	}
 }
 
-func (s *Service) Run() error {
-	log.Info("Starting service")
-
-	s.wg.Add(2)
-	go s.runMainLoop()
-	go s.runTray()
-
-	s.wg.Wait()
-	return nil
-}
-
 func (s *Service) RunAsService() error {
 	log.Info("Starting in service mode")
 	return s.runMainLoop()
@@ -56,7 +44,7 @@ func (s *Service) RunAsService() error {
 
 func (s *Service) RunAsGUI() error {
 	log.Info("Starting in GUI mode")
-	go s.runMainLoop()
+	s.Start()
 	return s.runTray()
 }
 
