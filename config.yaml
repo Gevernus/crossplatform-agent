@@ -1,6 +1,5 @@
 api_url: "https://panteam.pro/ksbim/stage-1/api"
 poll_interval: 60
 log_level: "debug"
-log_dir: "/var/log/crossplatformagent/"
 uuid: test-0.7495257423502781-grsfdf
 device_id: 9a2ee012-16ac-44f2-8d55-42af477b3194

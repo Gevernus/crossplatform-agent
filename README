@@ -1,5 +1,8 @@
 go build -o crossplatform-agent ./cmd/agent
+GOOS=windows GOARCH=amd64 go build -o crossplatform-agent.exe ./cmd/agent
+GOOS=linux GOARCH=amd64 go build -o crossplatform-agent ./cmd/agent
 cat /Library/LaunchDaemons/com.gevernus.crossplatformagent.plist
+cat /Library/LaunchDaemons/CrossPlatformAgentService.plist
 sudo ./crossplatform-agent -action uninstall 
 sudo ./crossplatform-agent -action install 
 sudo ./crossplatform-agent -action start 
@@ -11,3 +14,7 @@ sudo cat /var/log/crossplatformagent/crossplatformagent.err
 tail -f /var/log/crossplatformagent/crossplatformagent.log
 tail -f /var/log/crossplatformagent/crossplatformagent.err
 sudo launchctl list | grep com.gevernus.crossplatformagent
+sudo launchctl list | grep CrossPlatformAgentService.plist
+tail -f /var/log/CrossPlatformAgentService.err.log
+sudo launchctl load /Library/LaunchDaemons/CrossPlatformAgentService.plist
+sudo launchctl unload /Library/LaunchDaemons/CrossPlatformAgentService.plist

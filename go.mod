@@ -15,6 +15,7 @@ require (
 	github.com/getlantern/systray v1.2.2 // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/kardianos/service v1.2.2 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect

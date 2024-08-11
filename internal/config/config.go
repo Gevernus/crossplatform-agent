@@ -10,7 +10,6 @@ type Config struct {
 	APIURL        string `yaml:"api_url"`
 	PollInterval  int    `yaml:"poll_interval"`
 	LogLevel      string `yaml:"log_level"`
-	LogDir        string `yaml:"log_dir"`
 	ConfigPath    string `yaml:"-"`
 	ConfigPathAbs string `yaml:"-"`
 	UUID          string `yaml:"uuid"`
