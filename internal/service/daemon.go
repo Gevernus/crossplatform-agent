@@ -206,6 +206,8 @@ const macOSPlistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
     <key>ProgramArguments</key>
     <array>
         <string>{{.ExecPath}}</string>
+        <string>-mode</string>
+        <string>service</string>
     </array>
     <key>RunAtLoad</key>
     <true/>

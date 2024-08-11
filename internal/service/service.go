@@ -52,18 +52,16 @@ func (s *Service) runMainLoop() error {
 	ticker := time.NewTicker(time.Duration(s.cfg.PollInterval) * time.Second)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			if err := s.sendStatus(); err != nil {
-				log.Error("Failed to send status:", err)
-			}
+	for range ticker.C {
+		if err := s.sendStatus(); err != nil {
+			log.Error("Failed to send status:", err)
+		}
 
-			if err := s.processCommands(); err != nil {
-				log.Error("Failed to process commands:", err)
-			}
+		if err := s.processCommands(); err != nil {
+			log.Error("Failed to process commands:", err)
 		}
 	}
+	return nil
 }
 
 func (s *Service) runTray() error {

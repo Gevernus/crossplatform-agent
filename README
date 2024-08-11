@@ -5,7 +5,9 @@ sudo ./crossplatform-agent -action install
 sudo ./crossplatform-agent -action start 
 sudo ./crossplatform-agent -action stop 
 sudo ./crossplatform-agent -mode gui 
+sudo ./crossplatform-agent -mode service 
 sudo cat /var/log/crossplatformagent/crossplatformagent.log
 sudo cat /var/log/crossplatformagent/crossplatformagent.err
 tail -f /var/log/crossplatformagent/crossplatformagent.log
 tail -f /var/log/crossplatformagent/crossplatformagent.err
+sudo launchctl list | grep com.gevernus.crossplatformagent
