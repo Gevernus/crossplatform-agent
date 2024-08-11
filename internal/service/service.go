@@ -71,8 +71,7 @@ func (s *Service) runTray() error {
 
 func (s *Service) StopService() {
 	log.Info("Stopping service")
-	// Implement any cleanup or shutdown logic here
-	s.wg.Done()
+	s.Stop()
 }
 
 func (s *Service) sendStatus() error {
