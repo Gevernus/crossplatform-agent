@@ -1,4 +1,4 @@
-api_url: "https://panteam.pro/ksbim/stage-1/api/"
+api_url: "https://panteam.pro/ksbim/stage-1/api"
 poll_interval: 60
 log_level: "debug"
 log_dir: "/var/log/crossplatformagent/"

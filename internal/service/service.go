@@ -86,11 +86,12 @@ func (s *Service) sendStatus() error {
 }
 
 func (s *Service) processCommands() error {
+	log.Debug("Getting commands from server")
 	commands, err := s.api.GetCommands()
 	if err != nil {
 		return err
 	}
-
+	log.Debugf("Got: %d commands", len(commands))
 	for _, cmd := range commands {
 		log.Debug("Processing command:", cmd.Command)
 		s.logCommand(cmd.String())

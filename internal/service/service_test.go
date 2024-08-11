@@ -42,11 +42,11 @@ func (m *MockTrayManager) Stop() error {
 
 func TestService_Run(t *testing.T) {
 	cfg := &config.Config{
-		APIURL:        "http://localhost",
-		PollInterval:  1,
-		LogLevel:      "debug",
-		AgentID:       "test-agent",
-		AgentPassword: "test-pass",
+		APIURL:       "http://localhost",
+		PollInterval: 1,
+		LogLevel:     "debug",
+		UUID:         "test-agent",
+		DeviceID:     "test-device-id",
 	}
 
 	mockAPI := new(MockAPIClient)
@@ -91,11 +91,11 @@ func TestService_StopService(t *testing.T) {
 
 func TestService_sendStatus(t *testing.T) {
 	cfg := &config.Config{
-		APIURL:        "http://localhost",
-		PollInterval:  1,
-		LogLevel:      "debug",
-		AgentID:       "test-agent",
-		AgentPassword: "test-pass",
+		APIURL:       "http://localhost",
+		PollInterval: 1,
+		LogLevel:     "debug",
+		UUID:         "test-agent",
+		DeviceID:     "test-device-id",
 	}
 
 	mockAPI := new(MockAPIClient)
@@ -110,11 +110,11 @@ func TestService_sendStatus(t *testing.T) {
 
 func TestService_processCommands(t *testing.T) {
 	cfg := &config.Config{
-		APIURL:        "http://localhost",
-		PollInterval:  1,
-		LogLevel:      "debug",
-		AgentID:       "test-agent",
-		AgentPassword: "test-pass",
+		APIURL:       "http://localhost",
+		PollInterval: 1,
+		LogLevel:     "debug",
+		UUID:         "test-agent",
+		DeviceID:     "test-device-id",
 	}
 
 	mockAPI := new(MockAPIClient)

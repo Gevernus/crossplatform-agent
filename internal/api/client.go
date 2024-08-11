@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -72,13 +73,14 @@ func NewClient(baseURL, uuid, deviceID string) *Client {
 }
 
 func (c *Client) SendStatus() error {
-	log.Debug("Sending ok status to API")
 	url := fmt.Sprintf("%s/agents/status", c.baseURL)
+	log.Debug("Sending ok status to API:", url)
 	statusUpdate := StatusUpdate{UUID: c.uuid, HardwareID: c.deviceID}
 	payload, err := json.Marshal(statusUpdate)
 	if err != nil {
 		return err
 	}
+	log.Debugf("Payload being sent: %s", string(payload))
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
 	if err != nil {
@@ -94,6 +96,9 @@ func (c *Client) SendStatus() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		// Log the response body for more details on the error
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Debugf("Failed to send status: unexpected status code: %d, response: %s", resp.StatusCode, string(bodyBytes))
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 

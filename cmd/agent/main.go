@@ -36,7 +36,7 @@ func main() {
 	}
 
 	setLogLevel(cfg.LogLevel)
-	apiClient := api.NewClient(cfg.APIURL, cfg.AgentID, cfg.AgentPassword)
+	apiClient := api.NewClient(cfg.APIURL, cfg.UUID, cfg.DeviceID)
 	trayManager := tray.NewTrayManager(cfg)
 
 	// Pass these instances to the Service constructor

@@ -12,8 +12,8 @@ func TestLoad(t *testing.T) {
 api_url: "https://api.example.com"
 poll_interval: 60
 log_level: "info"
-agent_id: "test-agent"
-agent_password: "test-password"
+uuid: "test-agent"
+device_id: "test-device-id"
 `)
 	tmpfile, err := ioutil.TempFile("", "config.*.yaml")
 	if err != nil {
@@ -44,11 +44,11 @@ agent_password: "test-password"
 	if cfg.LogLevel != "info" {
 		t.Errorf("Expected LogLevel to be 'info', got '%s'", cfg.LogLevel)
 	}
-	if cfg.AgentID != "test-agent" {
-		t.Errorf("Expected AgentID to be 'test-agent', got '%s'", cfg.AgentID)
+	if cfg.UUID != "test-agent" {
+		t.Errorf("Expected AgentID to be 'test-agent', got '%s'", cfg.UUID)
 	}
-	if cfg.AgentPassword != "test-password" {
-		t.Errorf("Expected AgentPassword to be 'test-password', got '%s'", cfg.AgentPassword)
+	if cfg.DeviceID != "test-device-id" {
+		t.Errorf("Expected AgentPassword to be 'test-password', got '%s'", cfg.DeviceID)
 	}
 }
 
