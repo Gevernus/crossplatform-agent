@@ -15,8 +15,8 @@ type MockAPIClient struct {
 	mock.Mock
 }
 
-func (m *MockAPIClient) SendStatus(status string) error {
-	args := m.Called(status)
+func (m *MockAPIClient) SendStatus() error {
+	args := m.Called()
 	return args.Error(0)
 }
 
@@ -45,7 +45,6 @@ func TestService_Run(t *testing.T) {
 		APIURL:        "http://localhost",
 		PollInterval:  1,
 		LogLevel:      "debug",
-		LogPath:       "/tmp/log",
 		AgentID:       "test-agent",
 		AgentPassword: "test-pass",
 	}
@@ -95,7 +94,6 @@ func TestService_sendStatus(t *testing.T) {
 		APIURL:        "http://localhost",
 		PollInterval:  1,
 		LogLevel:      "debug",
-		LogPath:       "/tmp/log",
 		AgentID:       "test-agent",
 		AgentPassword: "test-pass",
 	}
@@ -115,14 +113,13 @@ func TestService_processCommands(t *testing.T) {
 		APIURL:        "http://localhost",
 		PollInterval:  1,
 		LogLevel:      "debug",
-		LogPath:       "/tmp/log",
 		AgentID:       "test-agent",
 		AgentPassword: "test-pass",
 	}
 
 	mockAPI := new(MockAPIClient)
 	commands := []api.Command{
-		{Action: "shutdown"},
+		{Command: "shutdown"},
 	}
 
 	mockAPI.On("GetCommands").Return(commands, nil)

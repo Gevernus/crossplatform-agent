@@ -13,48 +13,68 @@ import (
 
 type Client struct {
 	baseURL    string
-	agentID    string
-	password   string
+	uuid       string
+	deviceID   string
 	httpClient *http.Client
 }
 
 type StatusUpdate struct {
-	Status string `json:"status"`
+	UUID           string                 `json:"uuid"`
+	HardwareID     string                 `json:"hardware_id"`
+	AdditionalData map[string]interface{} `json:"additional_data"`
+}
+
+type CommandsRequest struct {
+	UUID       string `json:"uuid"`
+	HardwareID string `json:"hardware_id"`
 }
 
 type Command struct {
-	Action string            `json:"action"`
-	Params map[string]string `json:"params,omitempty"`
+	Command string                 `json:"command"`
+	Payload map[string]interface{} `json:"payload"`
+}
+
+type State struct {
+	Version     string `json:"version"`
+	Status      string `json:"status"`
+	Error       string `json:"error"`
+	ErrorUILink string `json:"error_ui_link"`
+}
+
+type GetCommandsResponse struct {
+	State      State     `json:"state"`
+	TotalCount int       `json:"total_count"`
+	Commands   []Command `json:"commands"`
 }
 
 func (c Command) String() string {
 	var params []string
-	for key, value := range c.Params {
+	for key, value := range c.Payload {
 		params = append(params, fmt.Sprintf("%s: %s", key, value))
 	}
 
 	paramsStr := strings.Join(params, ", ")
 	if paramsStr != "" {
-		return fmt.Sprintf("Action: %s, Params: {%s}", c.Action, paramsStr)
+		return fmt.Sprintf("Action: %s, Params: {%s}", c.Command, paramsStr)
 	}
-	return fmt.Sprintf("Action: %s", c.Action)
+	return fmt.Sprintf("Action: %s", c.Command)
 }
 
-func NewClient(baseURL, agentID, password string) *Client {
+func NewClient(baseURL, uuid, deviceID string) *Client {
 	return &Client{
 		baseURL:  baseURL,
-		agentID:  agentID,
-		password: password,
+		uuid:     uuid,
+		deviceID: deviceID,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
 	}
 }
 
-func (c *Client) SendStatus(status string) error {
-	log.Debug("Sending status to API:", status)
+func (c *Client) SendStatus() error {
+	log.Debug("Sending ok status to API")
 	url := fmt.Sprintf("%s/agents/status", c.baseURL)
-	statusUpdate := StatusUpdate{Status: status}
+	statusUpdate := StatusUpdate{UUID: c.uuid, HardwareID: c.deviceID}
 	payload, err := json.Marshal(statusUpdate)
 	if err != nil {
 		return err
@@ -65,7 +85,6 @@ func (c *Client) SendStatus(status string) error {
 		return err
 	}
 
-	req.SetBasicAuth(c.agentID, c.password)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -83,12 +102,20 @@ func (c *Client) SendStatus(status string) error {
 
 func (c *Client) GetCommands() ([]Command, error) {
 	url := fmt.Sprintf("%s/agents/commands", c.baseURL)
-	req, err := http.NewRequest("POST", url, nil)
+	commandsRequest := CommandsRequest{
+		UUID:       c.uuid,
+		HardwareID: c.deviceID,
+	}
+
+	payload, err := json.Marshal(commandsRequest)
 	if err != nil {
 		return nil, err
 	}
 
-	req.SetBasicAuth(c.agentID, c.password)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -100,10 +127,14 @@ func (c *Client) GetCommands() ([]Command, error) {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var commands []Command
-	if err := json.NewDecoder(resp.Body).Decode(&commands); err != nil {
+	var response GetCommandsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, err
 	}
 
-	return commands, nil
+	if response.State.Status != "200" {
+		return nil, fmt.Errorf("API returned error: %s", response.State.Error)
+	}
+
+	return response.Commands, nil
 }

@@ -14,7 +14,7 @@ import (
 )
 
 type APIClient interface {
-	SendStatus(status string) error
+	SendStatus() error
 	GetCommands() ([]api.Command, error)
 }
 
@@ -49,19 +49,25 @@ func (s *Service) RunAsGUI() error {
 }
 
 func (s *Service) runMainLoop() error {
+	s.performTasks()
 	ticker := time.NewTicker(time.Duration(s.cfg.PollInterval) * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		if err := s.sendStatus(); err != nil {
-			log.Error("Failed to send status:", err)
-		}
-
-		if err := s.processCommands(); err != nil {
-			log.Error("Failed to process commands:", err)
-		}
+		s.performTasks()
 	}
+
 	return nil
+}
+
+func (s *Service) performTasks() {
+	if err := s.sendStatus(); err != nil {
+		log.Error("Failed to send status:", err)
+	}
+
+	if err := s.processCommands(); err != nil {
+		log.Error("Failed to process commands:", err)
+	}
 }
 
 func (s *Service) runTray() error {
@@ -76,7 +82,7 @@ func (s *Service) StopService() {
 
 func (s *Service) sendStatus() error {
 	log.Debug("Sending status update")
-	return s.api.SendStatus("active")
+	return s.api.SendStatus()
 }
 
 func (s *Service) processCommands() error {
@@ -86,10 +92,10 @@ func (s *Service) processCommands() error {
 	}
 
 	for _, cmd := range commands {
-		log.Debug("Processing command:", cmd.Action)
+		log.Debug("Processing command:", cmd.Command)
 		s.logCommand(cmd.String())
 		if err := s.executeCommand(cmd); err != nil {
-			log.Error("Failed to execute command:", cmd.Action, err)
+			log.Error("Failed to execute command:", cmd.Command, err)
 		}
 	}
 
@@ -97,7 +103,7 @@ func (s *Service) processCommands() error {
 }
 
 func (s *Service) executeCommand(cmd api.Command) error {
-	switch cmd.Action {
+	switch cmd.Command {
 	case "shutdown":
 		log.Info("Executing shutdown command")
 		if err := commands.Shutdown(); err != nil {
@@ -111,8 +117,8 @@ func (s *Service) executeCommand(cmd api.Command) error {
 			return err
 		}
 	default:
-		log.Warn("Unknown command received:", cmd.Action)
-		return fmt.Errorf("unknown command: %s", cmd.Action)
+		log.Warn("Unknown command received:", cmd.Command)
+		return fmt.Errorf("unknown command: %s", cmd.Command)
 	}
 	return nil
 }

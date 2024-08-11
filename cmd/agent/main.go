@@ -18,7 +18,6 @@ func main() {
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
-	log.SetLevel(log.DebugLevel)
 
 	execPath, err := os.Executable()
 	if err != nil {
@@ -36,6 +35,7 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	setLogLevel(cfg.LogLevel)
 	apiClient := api.NewClient(cfg.APIURL, cfg.AgentID, cfg.AgentPassword)
 	trayManager := tray.NewTrayManager(cfg)
 
@@ -75,4 +75,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func setLogLevel(level string) error {
+	parsedLevel, err := log.ParseLevel(level)
+	if err != nil {
+		return err
+	}
+	log.SetLevel(parsedLevel)
+	return nil
 }

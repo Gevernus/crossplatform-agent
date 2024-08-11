@@ -10,7 +10,6 @@ type Config struct {
 	APIURL        string `yaml:"api_url"`
 	PollInterval  int    `yaml:"poll_interval"`
 	LogLevel      string `yaml:"log_level"`
-	LogPath       string `yaml:"log_path"`
 	LogDir        string `yaml:"log_dir"`
 	AgentID       string `yaml:"agent_id"`
 	AgentPassword string `yaml:"agent_password"`
