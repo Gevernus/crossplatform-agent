@@ -35,8 +35,8 @@ func (tm *TrayManager) OnExit() {
 }
 
 func (tm *TrayManager) onReady() {
-	// systray.SetIcon(assets.MustAsset("assets/tray_icon.ico"))
-	systray.SetIcon(assets.MustAsset("assets/tray_icon_24x24.png"))
+	systray.SetIcon(assets.MustAsset("assets/tray_icon.ico"))
+	// systray.SetIcon(assets.MustAsset("assets/tray_icon_24x24.png"))
 	systray.SetTooltip("Agent Service")
 	active, err := tm.svc.IsActive()
 	if err != nil {
