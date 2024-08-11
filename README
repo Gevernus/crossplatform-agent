@@ -3,6 +3,9 @@ cat /Library/LaunchDaemons/com.gevernus.crossplatformagent.plist
 sudo ./crossplatform-agent -action uninstall 
 sudo ./crossplatform-agent -action install 
 sudo ./crossplatform-agent -action start 
+sudo ./crossplatform-agent -action stop 
 sudo ./crossplatform-agent -mode gui 
-sudo cat /var/log/crossplatformagent.log
-sudo cat /var/log/crossplatformagent.err
+sudo cat /var/log/crossplatformagent/crossplatformagent.log
+sudo cat /var/log/crossplatformagent/crossplatformagent.err
+tail -f /var/log/crossplatformagent/crossplatformagent.log
+tail -f /var/log/crossplatformagent/crossplatformagent.err

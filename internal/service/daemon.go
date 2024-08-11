@@ -104,7 +104,7 @@ func (s *Service) installWindows() error {
 
 	cmd := exec.Command("sc", "create", "CrossPlatformAgentService",
 		"binPath=", fmt.Sprintf("%s -config %s", os.Args[0], s.cfg.ConfigPath),
-		"start=", "auto",
+		"start=", "demand",
 		"DisplayName=", "Cross Platform Agent Service")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create Windows service: %v", err)
@@ -177,8 +177,9 @@ func (s *Service) installMacOS() error {
 		return fmt.Errorf("failed to write plist file: %v", err)
 	}
 
-	cmd := exec.Command("launchctl", "load", plistPath)
-	return cmd.Run()
+	// cmd := exec.Command("launchctl", "load", plistPath)
+	// return cmd.Run()
+	return nil
 }
 
 func (s *Service) uninstallMacOS() error {
@@ -266,11 +267,6 @@ func (s *Service) installLinux() error {
 	}
 
 	cmd := exec.Command("systemctl", "daemon-reload")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to reload systemd: %v", err)
-	}
-
-	cmd = exec.Command("systemctl", "enable", "crossplatformagent.service")
 	return cmd.Run()
 }
 
