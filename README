@@ -18,3 +18,5 @@ sudo launchctl list | grep CrossPlatformAgentService.plist
 tail -f /var/log/CrossPlatformAgentService.err.log
 sudo launchctl load /Library/LaunchDaemons/CrossPlatformAgentService.plist
 sudo launchctl unload /Library/LaunchDaemons/CrossPlatformAgentService.plist
+
+CC="gcc" CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o crossplatform-agent ./cmd/agent
