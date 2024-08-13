@@ -13,3 +13,6 @@ tail -f /var/log/CrossPlatformAgentService.err.log
 # Включение и выключение служюбы под маком
 sudo launchctl load /Library/LaunchDaemons/CrossPlatformAgentService.plist
 sudo launchctl unload /Library/LaunchDaemons/CrossPlatformAgentService.plist
+# Запуск тестов и проверка покрытия
+go test ./... -coverprofile=coverage.out
+go test ./... -cover

@@ -1,0 +1,9 @@
+# Ignore log files
+CrossPlatformAgentService.log
+
+# Ignore test coverage reports
+coverage.out
+
+# Ignore the binary file
+crossplatform-agent
+crossplatform-agent.exe

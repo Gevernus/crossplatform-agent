@@ -3,31 +3,44 @@ package tray
 import (
 	"crossplatform-agent/assets"
 	"crossplatform-agent/internal/config"
-	"crossplatform-agent/internal/service"
 	"crossplatform-agent/pkg/utils"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 
-	"github.com/getlantern/systray"
 	log "github.com/sirupsen/logrus"
 )
 
-type TrayManager struct {
-	cfg *config.Config
-	svc *service.CrossService
+type ServiceInterface interface {
+	IsActive() (bool, error)
+	StartService() error
+	StopService() error
 }
 
-func NewTrayManager(cfg *config.Config, svc *service.CrossService) *TrayManager {
+type UtilsInterface interface {
+	OpenDirectory(path string) error
+	OpenFile(filePath string) error
+}
+
+type TrayManager struct {
+	cfg     *config.Config
+	svc     ServiceInterface
+	systray SystrayWrapper
+	utils   UtilsInterface
+}
+
+func NewTrayManager(cfg *config.Config, svc ServiceInterface) *TrayManager {
 	return &TrayManager{
-		cfg: cfg,
-		svc: svc,
+		cfg:     cfg,
+		svc:     svc,
+		systray: &DefaultSystrayWrapper{},
+		utils:   &utils.Impl{},
 	}
 }
 
 func (tm *TrayManager) Run() error {
-	systray.Run(tm.onReady, tm.OnExit)
+	tm.systray.Run(tm.onReady, tm.OnExit)
 	return nil
 }
 
@@ -36,8 +49,8 @@ func (tm *TrayManager) OnExit() {
 }
 
 func (tm *TrayManager) onReady() {
-	systray.SetTooltip("Agent Service")
-	err := setTrayIcon()
+	tm.systray.SetTooltip("Agent Service")
+	err := setTrayIcon(tm)
 	if err != nil {
 		log.Errorf("Failed to set tray icon: %v", err)
 	}
@@ -47,13 +60,13 @@ func (tm *TrayManager) onReady() {
 		log.Fatalf("Failed to check if service is active: %v", err)
 	}
 
-	mStatus := systray.AddMenuItem("Status: Active", "Agent Status")
+	mStatus := tm.systray.AddMenuItem("Status: Active", "Agent Status")
 	mStatus.Disable()
 
-	mAPIURL := systray.AddMenuItem(fmt.Sprintf("API: %s", tm.cfg.APIURL), "API URL")
+	mAPIURL := tm.systray.AddMenuItem(fmt.Sprintf("API: %s", tm.cfg.APIURL), "API URL")
 	mAPIURL.Disable()
 
-	mToggleService := systray.AddMenuItemCheckbox("Turn Off Service", "Toggle service status", true)
+	mToggleService := tm.systray.AddMenuItemCheckbox("Turn Off Service", "Toggle service status", true)
 	if active {
 		mToggleService.Check()
 	} else {
@@ -61,10 +74,10 @@ func (tm *TrayManager) onReady() {
 		mStatus.SetTitle("Status: Inactive")
 		mToggleService.Uncheck()
 	}
-	mCommandHistory := systray.AddMenuItem("Executed Commands", "Show executed commands")
+	mCommandHistory := tm.systray.AddMenuItem("Executed Commands", "Show executed commands")
 
-	mLogs := systray.AddMenuItem("Open Logs", "Open log directory")
-	mQuit := systray.AddMenuItem("Quit", "Quit the agent service")
+	mLogs := tm.systray.AddMenuItem("Open Logs", "Open log directory")
+	mQuit := tm.systray.AddMenuItem("Quit", "Quit the agent service")
 
 	go func() {
 		for {
@@ -92,14 +105,14 @@ func (tm *TrayManager) onReady() {
 			case <-mCommandHistory.ClickedCh:
 				tm.showCommandHistory()
 			case <-mQuit.ClickedCh:
-				systray.Quit()
+				tm.systray.Quit()
 				return
 			}
 		}
 	}()
 }
 
-func setTrayIcon() error {
+func setTrayIcon(tm *TrayManager) error {
 	var iconBytes []byte
 	var err error
 
@@ -114,7 +127,7 @@ func setTrayIcon() error {
 		return fmt.Errorf("failed to load tray icon: %w", err)
 	}
 
-	systray.SetIcon(iconBytes)
+	tm.systray.SetIcon(iconBytes)
 	return nil
 }
 
@@ -127,7 +140,7 @@ func (tm *TrayManager) showCommandHistory() {
 
 	logFilePath := filepath.Join(execDir, "Command_history.log")
 	log.Infof("Opening log file: %s", logFilePath)
-	err = utils.OpenFile(logFilePath)
+	err = tm.utils.OpenFile(logFilePath)
 	if err != nil {
 		log.Error("Failed to open log file:", err)
 	}
@@ -145,7 +158,7 @@ func (tm *TrayManager) openLogs() {
 	}
 	execDir := filepath.Dir(execPath)
 	log.Info("Opening logs directory: ", execDir)
-	err = utils.OpenDirectory(execDir)
+	err = tm.utils.OpenDirectory(execDir)
 	if err != nil {
 		log.Error("Failed to open logs directory:", err)
 	}
