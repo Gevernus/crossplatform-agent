@@ -1,0 +1,12 @@
+# Use xgo as the base image
+FROM karalabe/xgo-latest
+
+# Set environment variables for Go
+ENV CGO_ENABLED=1 GOOS=darwin GOARCH=amd64
+
+WORKDIR /app
+COPY . .
+
+RUN go mod download
+RUN go version
+RUN CC="gcc" CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o /bin/crossplatform-agent ./cmd/agent
