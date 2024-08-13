@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -20,9 +21,6 @@ func TestSendStatus(t *testing.T) {
 		if err != nil {
 			t.Errorf("Failed to decode request body: %v", err)
 		}
-		// if statusUpdate.Status != "active" {
-		// 	t.Errorf("Expected status 'active', got: %s", statusUpdate.Status)
-		// }
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -34,39 +32,36 @@ func TestSendStatus(t *testing.T) {
 	}
 }
 
-// func TestGetCommands(t *testing.T) {
-// 	expectedCommands := []Command{
-// 		{Action: "shutdown", Params: map[string]string{"delay": "30"}},
-// 		{Action: "update", Params: map[string]string{"version": "1.2.0"}},
-// 	}
+func TestGetCommands(t *testing.T) {
+	expectedResponse := GetCommandsResponse{
+		State: State{
+			Version:     "1.0", // Include this if you need the version in your test
+			Status:      "200",
+			Error:       "",
+			ErrorUILink: "", // Include this if necessary
+		},
+		Commands: []Command{
+			{Command: "shutdown"},
+			{Command: "update"},
+		},
+	}
 
-// 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		if r.URL.Path != "/agents/commands" {
-// 			t.Errorf("Expected to request '/agents/commands', got: %s", r.URL.Path)
-// 		}
-// 		w.Header().Set("Content-Type", "application/json")
-// 		json.NewEncoder(w).Encode(expectedCommands)
-// 	}))
-// 	defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/agents/commands" {
+			t.Errorf("Expected to request '/agents/commands', got: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(expectedResponse)
+	}))
+	defer server.Close()
 
-// 	client := NewClient(server.URL, "test-agent", "test-password")
-// 	commands, err := client.GetCommands()
-// 	if err != nil {
-// 		t.Errorf("GetCommands returned an error: %v", err)
-// 	}
+	client := NewClient(server.URL, "test-agent", "test-password")
+	commands, err := client.GetCommands()
+	if err != nil {
+		t.Fatalf("GetCommands returned an error: %v", err)
+	}
 
-// 	if len(commands) != len(expectedCommands) {
-// 		t.Errorf("Expected %d commands, got %d", len(expectedCommands), len(commands))
-// 	}
-
-// 	for i, cmd := range commands {
-// 		if cmd.Action != expectedCommands[i].Action {
-// 			t.Errorf("Expected command action '%s', got '%s'", expectedCommands[i].Action, cmd.Action)
-// 		}
-// 		for k, v := range expectedCommands[i].Params {
-// 			if cmd.Params[k] != v {
-// 				t.Errorf("Expected param '%s' to be '%s', got '%s'", k, v, cmd.Params[k])
-// 			}
-// 		}
-// 	}
-// }
+	if !reflect.DeepEqual(commands, expectedResponse.Commands) {
+		t.Errorf("Expected commands %+v, got %+v", expectedResponse.Commands, commands)
+	}
+}

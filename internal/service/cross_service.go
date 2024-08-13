@@ -28,7 +28,7 @@ type TrayManager interface {
 type CrossService struct {
 	cfg *config.Config
 	api APIClient
-	svc service.Service
+	Svc ServiceWrapper
 }
 
 func New(cfg *config.Config, apiClient APIClient) (*CrossService, error) {
@@ -58,7 +58,7 @@ func New(cfg *config.Config, apiClient APIClient) (*CrossService, error) {
 		return nil, fmt.Errorf("failed to create service: %v", err)
 	}
 
-	svc.svc = serviceObj
+	svc.Svc = serviceObj
 
 	return svc, nil
 }
@@ -94,7 +94,7 @@ func (s *CrossService) Stop(svc service.Service) error {
 }
 
 func (s *CrossService) StartService() error {
-	err := service.Control(s.svc, "start")
+	err := service.Control(s.Svc, "start")
 	if err != nil {
 		return fmt.Errorf("failed to start service: %v", err)
 	}
@@ -102,7 +102,7 @@ func (s *CrossService) StartService() error {
 }
 
 func (s *CrossService) StopService() error {
-	err := service.Control(s.svc, "stop")
+	err := service.Control(s.Svc, "stop")
 	if err != nil {
 		return fmt.Errorf("failed to stop service: %v", err)
 	}
@@ -110,7 +110,7 @@ func (s *CrossService) StopService() error {
 }
 
 func (s *CrossService) Install() error {
-	err := s.svc.Install()
+	err := s.Svc.Install()
 	if err != nil {
 		return fmt.Errorf("failed to install service: %v", err)
 	}
@@ -119,7 +119,7 @@ func (s *CrossService) Install() error {
 }
 
 func (s *CrossService) IsInstalled() (bool, error) {
-	status, err := s.svc.Status()
+	status, err := s.Svc.Status()
 	if err != nil {
 		if err == service.ErrNotInstalled {
 			// The service is not installed
@@ -134,7 +134,7 @@ func (s *CrossService) IsInstalled() (bool, error) {
 }
 
 func (s *CrossService) IsActive() (bool, error) {
-	status, err := s.svc.Status()
+	status, err := s.Svc.Status()
 	if err != nil {
 		if err == service.ErrNotInstalled {
 			return false, fmt.Errorf("service is not installed")
@@ -147,7 +147,7 @@ func (s *CrossService) IsActive() (bool, error) {
 }
 
 func (s *CrossService) Run() error {
-	if err := s.svc.Run(); err != nil {
+	if err := s.Svc.Run(); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -242,25 +242,3 @@ func (s *CrossService) logCommand(command string) {
 		log.Error("Failed to write to log file:", err)
 	}
 }
-
-// func getLogDir() (string, error) {
-// 	var logDir string
-// 	switch runtime.GOOS {
-// 	case "darwin":
-// 		// macOS: Use /var/log/ or a user-specific location
-// 		logDir = "/var/log/crossplatformagent"
-// 	case "linux":
-// 		// Linux: Use /var/log/ for system-wide logs or /home/<user>/.local/share/ for user-specific logs
-// 		logDir = "/var/log/crossplatformagent"
-// 	case "windows":
-// 		// Windows: Use %ProgramData%\YourAppName\Logs for system-wide logs
-// 		programData := os.Getenv("ProgramData")
-// 		if programData == "" {
-// 			return "", fmt.Errorf("could not determine ProgramData directory")
-// 		}
-// 		logDir = filepath.Join(programData, "CrossPlatformAgent", "Logs")
-// 	default:
-// 		return "", fmt.Errorf("unsupported platform")
-// 	}
-// 	return logDir, nil
-// }

@@ -1,22 +1,17 @@
-go build -o crossplatform-agent ./cmd/agent
-GOOS=windows GOARCH=amd64 go build -o crossplatform-agent.exe ./cmd/agent
-GOOS=linux GOARCH=amd64 go build -o crossplatform-agent ./cmd/agent
-cat /Library/LaunchDaemons/com.gevernus.crossplatformagent.plist
+# Сборка под мак (тестил только на маке)
+CC="gcc" CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o crossplatform-agent ./cmd/agent
+# Сборка под винду
+CC="gcc" CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -o crossplatform-agent.exe ./cmd/agent
+# Сборка под линукс
+CC="gcc" CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o crossplatform-agent ./cmd/agent
+# Запуск GUI в системном трее(установка службы если она не установлена)
+sudo ./crossplatform-agent 
+# Проверить что конфиг сервиса правильно установился
 cat /Library/LaunchDaemons/CrossPlatformAgentService.plist
-sudo ./crossplatform-agent -action uninstall 
-sudo ./crossplatform-agent -action install 
-sudo ./crossplatform-agent -action start 
-sudo ./crossplatform-agent -action stop 
-sudo ./crossplatform-agent -mode gui 
-sudo ./crossplatform-agent -mode service 
-sudo cat /var/log/crossplatformagent/crossplatformagent.log
-sudo cat /var/log/crossplatformagent/crossplatformagent.err
-tail -f /var/log/crossplatformagent/crossplatformagent.log
-tail -f /var/log/crossplatformagent/crossplatformagent.err
-sudo launchctl list | grep com.gevernus.crossplatformagent
-sudo launchctl list | grep CrossPlatformAgentService.plist
+# Лог вывода службы виндоус если не смог стартануть процесс
 tail -f /var/log/CrossPlatformAgentService.err.log
+# Включение и выключение служюбы под маком
 sudo launchctl load /Library/LaunchDaemons/CrossPlatformAgentService.plist
 sudo launchctl unload /Library/LaunchDaemons/CrossPlatformAgentService.plist
-
-CC="gcc" CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o crossplatform-agent ./cmd/agent
+# Запуск тестов и проверка покрытия (исключая assets.go потому что это генеренный файл)
+go test -coverprofile=coverage.out $(go list ./... | grep -v 'assets')

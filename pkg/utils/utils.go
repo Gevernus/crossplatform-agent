@@ -6,18 +6,22 @@ import (
 	"runtime"
 )
 
-func OpenDirectory(path string) error {
+var currentOS = runtime.GOOS
+var execCommand = exec.Command
+
+type Impl struct{}
+
+func (u *Impl) OpenDirectory(path string) error {
 	var cmd *exec.Cmd
-	switch runtime.GOOS {
+	switch currentOS {
 	case "windows":
-		cmd = exec.Command("explorer", path)
+		cmd = execCommand("explorer", path)
 	case "darwin":
-		cmd = exec.Command("open", path)
+		cmd = execCommand("open", path)
 	case "linux":
-		cmd = exec.Command("xdg-open", path)
+		cmd = execCommand("xdg-open", path)
 	default:
-		// Fallback for other Unix-like systems
-		cmd = exec.Command("sh", "-c", fmt.Sprintf("open '%s' || xdg-open '%s' || x-www-browser '%s'", path, path, path))
+		return fmt.Errorf("unsupported operating system: %s", currentOS)
 	}
 
 	output, err := cmd.CombinedOutput()
@@ -28,15 +32,23 @@ func OpenDirectory(path string) error {
 	return nil
 }
 
-func OpenFile(filePath string) error {
-	switch runtime.GOOS {
+func (u *Impl) OpenFile(filePath string) error {
+	var cmd *exec.Cmd
+	switch currentOS {
 	case "darwin":
-		return exec.Command("open", filePath).Start()
+		cmd = execCommand("open", filePath)
 	case "linux":
-		return exec.Command("xdg-open", filePath).Start()
+		cmd = execCommand("xdg-open", filePath)
 	case "windows":
-		return exec.Command("rundll32", "url.dll,FileProtocolHandler", filePath).Start()
+		cmd = execCommand("rundll32", "url.dll,FileProtocolHandler", filePath)
 	default:
 		return fmt.Errorf("unsupported platform")
 	}
+
+	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+
+	return nil
 }

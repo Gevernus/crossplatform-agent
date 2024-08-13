@@ -1,4 +1,4 @@
-package commands
+package utils
 
 import (
 	"os"
@@ -56,29 +56,72 @@ func helperCommand(t *testing.T, cmd string, args ...string) *exec.Cmd {
 	return command
 }
 
-func TestShutdown(t *testing.T) {
+// TestOpenDirectory tests the OpenDirectory function
+func TestOpenDirectory(t *testing.T) {
 	originalOS := currentOS
-	originalExecCommand := execCommand
-	defer func() {
-		currentOS = originalOS
-		execCommand = originalExecCommand
-	}()
+	defer func() { currentOS = originalOS }()
 
 	tests := []struct {
 		name        string
 		os          string
+		path        string
+		expectError bool
+	}{
+		{"Windows", "windows", "C:\\test", false},
+		{"Darwin", "darwin", "/test", false},
+		{"Linux", "linux", "/test", false},
+		{"Unsupported", "unsupported", "/test", true},
+	}
+	u := &Impl{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			currentOS = tt.os
+
+			// Mock execCommand
+			oldExecCommand := execCommand
+			defer func() { execCommand = oldExecCommand }()
+
+			execCommand = func(name string, arg ...string) *exec.Cmd {
+				return helperCommand(t, "echo", name, strings.Join(arg, " "))
+			}
+
+			err := u.OpenDirectory(tt.path)
+
+			if tt.expectError && err == nil {
+				t.Errorf("expected an error, but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// TestOpenFile tests the OpenFile function
+func TestOpenFile(t *testing.T) {
+	originalExecCommand := execCommand
+	originalOS := currentOS
+	defer func() {
+		execCommand = originalExecCommand
+		currentOS = originalOS
+	}()
+
+	tests := []struct {
+		name        string
+		goos        string
+		path        string
 		expectedCmd string
 		expectError bool
 	}{
-		{"Windows", "windows", "shutdown /s /t 0", false},
-		{"Darwin", "darwin", "shutdown -h now", false},
-		{"Linux", "linux", "shutdown -h now", false},
-		{"Unsupported", "freebsd", "", true},
+		{"Windows Success", "windows", "C:\\test.txt", "rundll32 url.dll,FileProtocolHandler C:\\test.txt", false},
+		{"Darwin Success", "darwin", "/test.txt", "open /test.txt", false},
+		{"Linux Success", "linux", "/test.txt", "xdg-open /test.txt", false},
+		{"Unsupported OS", "freebsd", "/test.txt", "", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			currentOS = tt.os
+			currentOS = tt.goos
 
 			var cmd *exec.Cmd
 			execCommand = func(name string, arg ...string) *exec.Cmd {
@@ -86,83 +129,15 @@ func TestShutdown(t *testing.T) {
 				cmd.Args = append(cmd.Args, arg...)
 				return cmd
 			}
-
-			err := Shutdown()
+			u := &Impl{}
+			err := u.OpenFile(tt.path)
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "unsupported operating system")
+				assert.Contains(t, err.Error(), "unsupported platform")
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedCmd, strings.Join(cmd.Args[3:], " "), "Unexpected command")
-			}
-		})
-	}
-}
-
-func TestShutdownNetwork(t *testing.T) {
-	originalOS := currentOS
-	originalExecCommand := execCommand
-	defer func() {
-		currentOS = originalOS
-		execCommand = originalExecCommand
-	}()
-
-	tests := []struct {
-		name         string
-		os           string
-		expectedCmds []string
-		expectError  bool
-	}{
-		{
-			"Windows",
-			"windows",
-			[]string{"netsh interface set interface name=* admin=disabled"},
-			false,
-		},
-		{
-			"Darwin",
-			"darwin",
-			[]string{
-				"networksetup -setairportpower en0 off",
-				"networksetup -setnetworkserviceenabled Ethernet off",
-			},
-			false,
-		},
-		{
-			"Linux",
-			"linux",
-			[]string{"nmcli networking off"},
-			false,
-		},
-		{
-			"Unsupported",
-			"freebsd",
-			nil,
-			true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			currentOS = tt.os
-
-			var commands []string
-			execCommand = func(name string, arg ...string) *exec.Cmd {
-				cmd := helperCommand(t, "echo", name)
-				cmd.Args = append(cmd.Args, arg...)
-				commands = append(commands, strings.Join(cmd.Args[3:], " "))
-				return cmd
-			}
-
-			err := ShutdownNetwork()
-
-			if tt.expectError {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "unsupported operating system")
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedCmds, commands, "Unexpected commands")
 			}
 		})
 	}
